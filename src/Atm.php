@@ -17,10 +17,13 @@ namespace NFePHP\Averbacao;
  * @link      http://github.com/nfephp-org/sped-averbacao for the canonical source repository
  */
 
-use NFePHP\Averbacao\Common\Tools;
 use NFePHP\Common\Strings;
+use NFePHP\Common\Signer;
+use NFePHP\Averbacao\Common\Tools as ToolsCommon;
+use RuntimeException;
+use InvalidArgumentException;
 
-class Atm extends Tools
+class Atm extends ToolsCommon
 {
     /**
      * @var string
@@ -40,7 +43,7 @@ class Atm extends Tools
     /**
      * @var int
      */
-    public $tpAmb = 1;
+    public $tpAmb = '';
 
     /**
      * Set Information
@@ -59,14 +62,14 @@ class Atm extends Tools
 
     /**
      * Request authorization to issue XML  in batch with one or more documents
-     * @param $cXml string CTe or MDFe
+     * @param $cXml of CTe or MDFe
      * @param int $cTipo of type CTE,MDFe or NFe
      * @return string soap response xml
      */
     public function averbaXml($cXml, $cTipo)
     {
         if (empty($cXml)) {
-            throw new \InvalidArgumentException('Um XML do (CTe, MDFe, NFe), protocolado deve ser passado.');
+            throw new \InvalidArgumentException('Um XML do (CTe,MDFe,NFe), protocolado deve ser passado.');
         }
         if (empty($this->cUsuario)) {
             throw new \InvalidArgumentException('O usuário da AT&M deve ser passado.');
@@ -103,24 +106,22 @@ class Atm extends Tools
             $this->cUrl = 'http://homologaws.averba.com.br/20/index.soap?wsdl';
             $this->cHost = 'homologaws.averba.com.br';
         }
-        $cXml = htmlentities($cXml);
         $request = "<$cTagAction>"
             . "<usuario>$this->cUsuario</usuario>"
             . "<senha>$this->cSenha</senha>"
             . "<codatm>$this->cCodigo</codatm>"
-            . "<$cTagXml>$cXml</$cTagXml>"
+            . "<$cTagXml><![CDATA[$cXml]]></$cTagXml>"
             . "</$cTagAction>";
         $request = Strings::clearXmlString($request, true);
-        $cXmlSoap = '<?xml version="1.0" encoding="utf-8"?>';
-        $cXmlSoap .= '<soapenv:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        $cXmlSoap     = '<?xml version="1.0" encoding="utf-8"?>';
+        $cXmlSoap    .= '<soapenv:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 						 xmlns:xsd="http://www.w3.org/2001/XMLSchema"
 						 xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
 						 xmlns:urn="urn:ATMWebSvr">';
-        $cXmlSoap .= '<soapenv:Body>';
-        $cXmlSoap .= $request;
-        $cXmlSoap .= '</soapenv:Body>';
-        $cXmlSoap .= '</soapenv:Envelope>';
-        $this->lastRequest = $cXmlSoap;
+        $cXmlSoap    .= '<soapenv:Body>';
+        $cXmlSoap    .= $request;
+        $cXmlSoap    .= '</soapenv:Body>';
+        $cXmlSoap    .= '</soapenv:Envelope>';
         $this->lastResponse = $this->sendRequest($cXmlSoap);
         return $this->lastResponse;
     }
